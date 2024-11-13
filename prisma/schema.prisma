@@ -1,0 +1,114 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+// Looking for ways to speed up your queries, or scale easily with your serverless or edge functions?
+// Try Prisma Accelerate: https://pris.ly/cli/accelerate-init
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+// user
+model m_user {
+  id         BigInt  @id @default(autoincrement())
+  username   String  @unique
+  password   String
+  token      String?
+  role       String
+  pegawai_id BigInt? @unique
+}
+
+// pesanan
+model t_pesanan {
+  id               BigInt              @id @default(autoincrement())
+  pelanggan_id     BigInt              @unique
+  jenis_pakaian_id BigInt
+  tahap            String
+  target_tanggal   DateTime?
+  catatan          String?
+  penerima_tugas   BigInt?
+  pelanggan        m_pelanggan?        @relation(fields: [pelanggan_id], references: [id])
+  jenis_pakaian    m_jenis_pakaian?    @relation(fields: [jenis_pakaian_id], references: [id])
+  tahap_objek      m_proses_tahap?     @relation(fields: [tahap], references: [kode])
+  dokumen          t_pesanan_dokumen[]
+  pengukuran       t_pesanan_ukur[]
+}
+
+model t_pesanan_dokumen {
+  id         BigInt     @id @default(autoincrement())
+  pesanan_id BigInt
+  nama       String
+  base64     String
+  deskripsi  String?
+  pesanan    t_pesanan? @relation(fields: [pesanan_id], references: [id])
+}
+
+model t_pesanan_ukur {
+  id            BigInt     @id @default(autoincrement())
+  pesanan_id    BigInt
+  pengukuran_id BigInt
+  nilai         Decimal?
+  catatan       String?
+  pesanan       t_pesanan? @relation(fields: [pesanan_id], references: [id])
+}
+
+// model
+model m_jenis_pakaian {
+  id            BigInt      @id @default(autoincrement())
+  nama          String
+  jenis_kelamin String?
+  deskripsi     String?
+  pesanan       t_pesanan[]
+}
+
+// pelanggan
+model m_pelanggan {
+  id            BigInt     @id @default(autoincrement())
+  nama          String
+  no_hp         String?
+  jenis_kelamin String?
+  tanggal_lahir DateTime?
+  alamat        String?
+  pesanan       t_pesanan?
+}
+
+// pegawai
+model m_pegawai {
+  id    BigInt  @id @default(autoincrement())
+  nip   String  @unique
+  nama  String
+  no_hp String?
+}
+
+// aktivitas
+model t_riwayat_aktivitas {
+  id        BigInt   @id @default(autoincrement())
+  tabel     String?
+  data_id   BigInt?
+  aktivitas String
+  tanggal   DateTime
+  oleh      String
+}
+
+// tahap
+model m_proses_tahap {
+  id        BigInt      @id @default(autoincrement())
+  kode      String      @unique
+  nama      String
+  deskripsi String?
+  urutan    Int
+  pesanan   t_pesanan[]
+}
+
+// pengukuran
+model m_pengukuran {
+  id        BigInt  @id @default(autoincrement())
+  nama      String  @unique
+  satuan    String
+  deskripsi String?
+}
