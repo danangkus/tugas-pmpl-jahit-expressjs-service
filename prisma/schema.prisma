@@ -57,15 +57,6 @@ model t_pesanan_ukur {
   pesanan       t_pesanan? @relation(fields: [pesanan_id], references: [id])
 }
 
-// model
-model m_jenis_pakaian {
-  id            BigInt      @id @default(autoincrement())
-  nama          String
-  jenis_kelamin String?
-  deskripsi     String?
-  pesanan       t_pesanan[]
-}
-
 // pelanggan
 model m_pelanggan {
   id            BigInt     @id @default(autoincrement())
@@ -75,6 +66,15 @@ model m_pelanggan {
   tanggal_lahir DateTime?
   alamat        String?
   pesanan       t_pesanan?
+}
+
+// model
+model m_jenis_pakaian {
+  id            BigInt      @id @default(autoincrement())
+  nama          String
+  jenis_kelamin String?
+  deskripsi     String?
+  pesanan       t_pesanan[]
 }
 
 // pegawai

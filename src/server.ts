@@ -211,25 +211,6 @@ app.delete("/pesanan/hapus", async (req: Request, res: Response) => {
   }
 });
 
-// model
-app.get("/model/daftar", async (req: Request, res: Response) => {
-  try {
-    const daftarData = await prisma.m_jenis_pakaian.findMany({
-      orderBy: [{ id: "desc" }],
-    });
-
-    res.json({
-      pesan: "Success",
-      hasil: daftarData.map((row) => {
-        return { ...row, id: Number(row.id.toString()) };
-      }),
-    });
-  } catch (error) {
-    console.error("error get list model", error);
-    res.status(500).json({ pesan: "Internal server error" });
-  }
-});
-
 // pelanggan
 app.get("/pelanggan/daftar", async (req: Request, res: Response) => {
   try {
@@ -245,6 +226,87 @@ app.get("/pelanggan/daftar", async (req: Request, res: Response) => {
     });
   } catch (error) {
     console.error("error get list pelanggan", error);
+    res.status(500).json({ pesan: "Internal server error" });
+  }
+});
+app.get("/pelanggan/ambil", async (req: Request, res: Response) => {
+  const { id } = req.query;
+
+  try {
+    const data = await prisma.m_pelanggan.findUnique({
+      where: { id: Number(id) },
+    });
+
+    res.json({
+      pesan: "Success",
+      hasil: { ...data, id: Number(data?.id.toString()) },
+    });
+  } catch (error) {
+    console.error("error get detail pelanggan", error);
+    res.status(500).json({ pesan: "Internal server error" });
+  }
+});
+app.post("/pelanggan/tambah", async (req: Request, res: Response) => {
+  const { nama, no_hp, jenis_kelamin, tanggal_lahir, alamat } = req.body;
+
+  try {
+    const pelanggan = await prisma.m_pelanggan.create({
+      data: { nama, no_hp, jenis_kelamin, tanggal_lahir, alamat },
+    });
+
+    res.json({
+      pesan: "Success",
+    });
+  } catch (error) {
+    console.error("error tambah pelanggan", error);
+    res.status(500).json({ pesan: "Internal server error" });
+  }
+});
+app.put("/pelanggan/ubah", async (req: Request, res: Response) => {
+  const { id, nama, no_hp, jenis_kelamin, tanggal_lahir, alamat } = req.body;
+
+  try {
+    const pelanggan = await prisma.m_pelanggan.update({
+      data: { nama, no_hp, jenis_kelamin, tanggal_lahir, alamat },
+      where: { id },
+    });
+
+    res.json({ pesan: "Success" });
+  } catch (error) {
+    console.error("error ubah pelanggan", error);
+    res.status(500).json({ pesan: "Internal server error" });
+  }
+});
+app.delete("/pelanggan/hapus", async (req: Request, res: Response) => {
+  const { id } = req.query;
+
+  try {
+    const pelanggan = await prisma.m_pelanggan.delete({
+      where: { id: Number(id) },
+    });
+
+    res.json({ pesan: "Success" });
+  } catch (error) {
+    console.error("error hapus pelanggan", error);
+    res.status(500).json({ pesan: "Internal server error" });
+  }
+});
+
+// model
+app.get("/model/daftar", async (req: Request, res: Response) => {
+  try {
+    const daftarData = await prisma.m_jenis_pakaian.findMany({
+      orderBy: [{ id: "desc" }],
+    });
+
+    res.json({
+      pesan: "Success",
+      hasil: daftarData.map((row) => {
+        return { ...row, id: Number(row.id.toString()) };
+      }),
+    });
+  } catch (error) {
+    console.error("error get list model", error);
     res.status(500).json({ pesan: "Internal server error" });
   }
 });
