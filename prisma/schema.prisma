@@ -35,8 +35,10 @@ model t_pesanan {
   pelanggan        m_pelanggan?        @relation(fields: [pelanggan_id], references: [id])
   jenis_pakaian    m_jenis_pakaian?    @relation(fields: [jenis_pakaian_id], references: [id])
   tahap_objek      m_proses_tahap?     @relation(fields: [tahap], references: [kode])
+  pegawai          m_pegawai?          @relation(fields: [penerima_tugas], references: [id])
   dokumen          t_pesanan_dokumen[]
   pengukuran       t_pesanan_ukur[]
+  bahan            t_pesanan_bahan[]
 }
 
 model t_pesanan_dokumen {
@@ -49,12 +51,23 @@ model t_pesanan_dokumen {
 }
 
 model t_pesanan_ukur {
-  id            BigInt     @id @default(autoincrement())
+  id            BigInt        @id @default(autoincrement())
   pesanan_id    BigInt
   pengukuran_id BigInt
   nilai         Decimal?
   catatan       String?
-  pesanan       t_pesanan? @relation(fields: [pesanan_id], references: [id])
+  pesanan       t_pesanan?    @relation(fields: [pesanan_id], references: [id])
+  pengukuran    m_pengukuran? @relation(fields: [pengukuran_id], references: [id])
+}
+
+model t_pesanan_bahan {
+  id         BigInt     @id @default(autoincrement())
+  pesanan_id BigInt
+  bahan_id   BigInt
+  jumlah     Decimal?
+  catatan    String?
+  pesanan    t_pesanan? @relation(fields: [pesanan_id], references: [id])
+  bahan      m_bahan?   @relation(fields: [bahan_id], references: [id])
 }
 
 // pelanggan
@@ -74,15 +87,17 @@ model m_jenis_pakaian {
   nama          String
   jenis_kelamin String?
   deskripsi     String?
+  gambar_base64 String?
   pesanan       t_pesanan[]
 }
 
 // pegawai
 model m_pegawai {
-  id    BigInt  @id @default(autoincrement())
-  nip   String  @unique
-  nama  String
-  no_hp String?
+  id        BigInt      @id @default(autoincrement())
+  nip       String      @unique
+  nama      String
+  no_hp     String?
+  t_pesanan t_pesanan[]
 }
 
 // aktivitas
@@ -107,8 +122,20 @@ model m_proses_tahap {
 
 // pengukuran
 model m_pengukuran {
-  id        BigInt  @id @default(autoincrement())
-  nama      String  @unique
-  satuan    String
-  deskripsi String?
+  id           BigInt           @id @default(autoincrement())
+  nama         String           @unique
+  satuan       String
+  deskripsi    String?
+  pesanan_ukur t_pesanan_ukur[]
+}
+
+// bahan
+model m_bahan {
+  id            BigInt            @id @default(autoincrement())
+  nama          String            @unique
+  satuan        String
+  stok          Int?
+  harga         Int?
+  deskripsi     String?
+  pesanan_bahan t_pesanan_bahan[]
 }
