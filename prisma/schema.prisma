@@ -15,18 +15,19 @@ datasource db {
 
 // user
 model m_user {
-  id         BigInt  @id @default(autoincrement())
-  username   String  @unique
-  password   String
-  token      String?
-  role       String
-  pegawai_id BigInt? @unique
+  id                     BigInt    @id @default(autoincrement())
+  username               String    @unique
+  password               String
+  token                  String?
+  role                   String
+  pegawai_id             BigInt?   @unique
+  tanggal_login_terakhir DateTime?
 }
 
 // pesanan
 model t_pesanan {
   id               BigInt              @id @default(autoincrement())
-  pelanggan_id     BigInt              @unique
+  pelanggan_id     BigInt
   jenis_pakaian_id BigInt
   tahap            String
   target_tanggal   DateTime?
@@ -72,13 +73,13 @@ model t_pesanan_bahan {
 
 // pelanggan
 model m_pelanggan {
-  id            BigInt     @id @default(autoincrement())
+  id            BigInt      @id @default(autoincrement())
   nama          String
   no_hp         String?
   jenis_kelamin String?
   tanggal_lahir DateTime?
   alamat        String?
-  pesanan       t_pesanan?
+  pesanan       t_pesanan[]
 }
 
 // model
@@ -93,11 +94,11 @@ model m_jenis_pakaian {
 
 // pegawai
 model m_pegawai {
-  id        BigInt      @id @default(autoincrement())
-  nip       String      @unique
-  nama      String
-  no_hp     String?
-  t_pesanan t_pesanan[]
+  id      BigInt      @id @default(autoincrement())
+  nip     String      @unique
+  nama    String
+  no_hp   String?
+  pesanan t_pesanan[]
 }
 
 // aktivitas

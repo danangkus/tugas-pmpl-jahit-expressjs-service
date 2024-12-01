@@ -1,4 +1,4 @@
-import { Prisma, PrismaClient } from "@prisma/client";
+import { m_pegawai, Prisma, PrismaClient } from "@prisma/client";
 import express, { Request, Response } from "express";
 import cors from "cors";
 import bodyParser from "body-parser";
@@ -48,6 +48,10 @@ app.post("/login", async (req: Request, res: Response) => {
     }
 
     res.json({ pesan: "Success" });
+    const data = await prisma.m_user.update({
+      data: { tanggal_login_terakhir: new Date().toISOString() },
+      where: { id: user.id },
+    });
   } catch (error) {
     console.error(error);
     res.status(500).json({ pesan: "Internal server error", hasil: error });
@@ -103,8 +107,8 @@ app.get("/pesanan/ambil", async (req: Request, res: Response) => {
         tahap_objek: true,
         pegawai: true,
         dokumen: true,
-        pengukuran: true,
-        bahan: true,
+        pengukuran: { include: { pengukuran: true } },
+        bahan: { include: { bahan: true } },
       },
     });
 
@@ -145,6 +149,7 @@ app.get("/pesanan/ambil", async (req: Request, res: Response) => {
             id: Number(row.id.toString()),
             pesanan_id: Number(row.pesanan_id.toString()),
             bahan_id: Number(row.bahan_id.toString()),
+            bahan: { ...row.bahan, id: Number(row.bahan?.id.toString()) },
           };
         }),
         pengukuran: data?.pengukuran.map((row) => {
@@ -153,6 +158,10 @@ app.get("/pesanan/ambil", async (req: Request, res: Response) => {
             id: Number(row.id.toString()),
             pesanan_id: Number(row.pesanan_id.toString()),
             pengukuran_id: Number(row.pengukuran_id.toString()),
+            pengukuran: {
+              ...row.pengukuran,
+              id: Number(row.pengukuran?.id.toString()),
+            },
           };
         }),
       },
@@ -285,11 +294,34 @@ app.get("/pelanggan/ambil", async (req: Request, res: Response) => {
   try {
     const data = await prisma.m_pelanggan.findUnique({
       where: { id: Number(id) },
+      include: {
+        pesanan: { include: { jenis_pakaian: true, tahap_objek: true } },
+      },
     });
 
     res.json({
       pesan: "Success",
-      hasil: { ...data, id: Number(data?.id.toString()) },
+      hasil: {
+        ...data,
+        id: Number(data?.id.toString()),
+        pesanan: data?.pesanan.map((row) => {
+          return {
+            ...row,
+            id: Number(row.id.toString()),
+            pelanggan_id: Number(row.pelanggan_id.toString()),
+            jenis_pakaian_id: Number(row.jenis_pakaian_id.toString()),
+            penerima_tugas: Number(row.penerima_tugas?.toString()),
+            tahap_objek: {
+              ...row.tahap_objek,
+              id: Number(row.tahap_objek?.id.toString()),
+            },
+            jenis_pakaian: {
+              ...row.jenis_pakaian,
+              id: Number(row.jenis_pakaian?.id.toString()),
+            },
+          };
+        }),
+      },
     });
   } catch (error) {
     console.error("error get detail pelanggan", error);
@@ -366,11 +398,30 @@ app.get("/model/ambil", async (req: Request, res: Response) => {
   try {
     const data = await prisma.m_jenis_pakaian.findUnique({
       where: { id: Number(id) },
+      include: {
+        pesanan: { include: { pelanggan: true } },
+      },
     });
 
     res.json({
       pesan: "Success",
-      hasil: { ...data, id: Number(data?.id.toString()) },
+      hasil: {
+        ...data,
+        id: Number(data?.id.toString()),
+        pesanan: data?.pesanan.map((row) => {
+          return {
+            ...row,
+            id: Number(row.id.toString()),
+            pelanggan_id: Number(row.pelanggan_id.toString()),
+            jenis_pakaian_id: Number(row.jenis_pakaian_id.toString()),
+            penerima_tugas: Number(row.penerima_tugas?.toString()),
+            pelanggan: {
+              ...row.pelanggan,
+              id: Number(row.pelanggan?.id.toString()),
+            },
+          };
+        }),
+      },
     });
   } catch (error) {
     console.error("error get detail model", error);
@@ -447,11 +498,40 @@ app.get("/pegawai/ambil", async (req: Request, res: Response) => {
   try {
     const data = await prisma.m_pegawai.findUnique({
       where: { id: Number(id) },
+      include: {
+        pesanan: {
+          include: { pelanggan: true, jenis_pakaian: true, tahap_objek: true },
+        },
+      },
     });
 
     res.json({
       pesan: "Success",
-      hasil: { ...data, id: Number(data?.id.toString()) },
+      hasil: {
+        ...data,
+        id: Number(data?.id.toString()),
+        pesanan: data?.pesanan.map((row) => {
+          return {
+            ...row,
+            id: Number(row.id.toString()),
+            pelanggan_id: Number(row.pelanggan_id.toString()),
+            jenis_pakaian_id: Number(row.jenis_pakaian_id.toString()),
+            penerima_tugas: Number(row.penerima_tugas?.toString()),
+            jenis_pakaian: {
+              ...row.jenis_pakaian,
+              id: Number(row.jenis_pakaian?.id.toString()),
+            },
+            pelanggan: {
+              ...row.pelanggan,
+              id: Number(row.pelanggan?.id.toString()),
+            },
+            tahap_objek: {
+              ...row.tahap_objek,
+              id: Number(row.tahap_objek?.id.toString()),
+            },
+          };
+        }),
+      },
     });
   } catch (error) {
     console.error("error get detail pegawai", error);
@@ -534,6 +614,13 @@ app.get("/pengguna/ambil", async (req: Request, res: Response) => {
     const data = await prisma.m_user.findUnique({
       where: { id: Number(id) },
     });
+    let pegawai: any = null;
+    if (data?.pegawai_id) {
+      const pegawaiData = await prisma.m_pegawai.findUnique({
+        where: { id: data?.pegawai_id },
+      });
+      pegawai = { ...pegawaiData, id: Number(pegawaiData?.id.toString()) };
+    }
 
     res.json({
       pesan: "Success",
@@ -541,6 +628,7 @@ app.get("/pengguna/ambil", async (req: Request, res: Response) => {
         ...data,
         id: Number(data?.id.toString()),
         pegawai_id: Number(data?.pegawai_id?.toString()),
+        pegawai: pegawai,
       },
     });
   } catch (error) {
