@@ -112,6 +112,11 @@ app.get("/pesanan/ambil", async (req: Request, res: Response) => {
       },
     });
 
+    const dataAktivitas = await prisma.t_riwayat_aktivitas.findMany({
+      where: { tabel: "t_pesanan", data_id: Number(id) },
+      orderBy: { id: "desc" },
+    });
+
     res.json({
       pesan: "Success",
       hasil: {
@@ -164,6 +169,13 @@ app.get("/pesanan/ambil", async (req: Request, res: Response) => {
             },
           };
         }),
+        aktivitas: dataAktivitas.map((row) => {
+          return {
+            ...row,
+            id: Number(row.id.toString()),
+            data_id: Number(row.data_id?.toString()),
+          };
+        }),
       },
     });
   } catch (error) {
@@ -179,6 +191,7 @@ app.post("/pesanan/tambah", async (req: Request, res: Response) => {
     catatan,
     dokumen,
     pengukuran,
+    bahan,
   } = req.body;
 
   try {
@@ -191,6 +204,7 @@ app.post("/pesanan/tambah", async (req: Request, res: Response) => {
         catatan,
         dokumen: { createMany: { data: dokumen } },
         pengukuran: { createMany: { data: pengukuran } },
+        bahan: { createMany: { data: bahan } },
       },
     });
 
