@@ -1,4 +1,12 @@
-import { m_pegawai, Prisma, PrismaClient } from "@prisma/client";
+import {
+  m_pegawai,
+  m_pengukuran,
+  Prisma,
+  PrismaClient,
+  t_pesanan_bahan,
+  t_pesanan_dokumen,
+  t_pesanan_ukur,
+} from "@prisma/client";
 import express, { Request, Response } from "express";
 import cors from "cors";
 import bodyParser from "body-parser";
@@ -47,7 +55,7 @@ app.post("/login", async (req: Request, res: Response) => {
       return;
     }
 
-    res.json({ pesan: "Success" });
+    res.json({ pesan: "Success", hasil: { role: user.role } });
     const data = await prisma.m_user.update({
       data: { tanggal_login_terakhir: new Date().toISOString() },
       where: { id: user.id },
@@ -223,25 +231,98 @@ app.put("/pesanan/ubah", async (req: Request, res: Response) => {
     jenis_pakaian_id,
     target_tanggal,
     catatan,
-    tahap,
-    penerima_tugas,
     dokumen,
     pengukuran,
-    oleh,
+    bahan,
   } = req.body;
 
   try {
+    const [
+      toDeleteDokumenResponse,
+      toDeleteUkurResponse,
+      toDeleteBahanResponse,
+    ] = await Promise.all([
+      prisma.t_pesanan_dokumen.findMany({
+        where: {
+          pesanan_id: id,
+          id: {
+            notIn: dokumen
+              .filter((row: t_pesanan_dokumen) => row.id != null)
+              .map((row: t_pesanan_dokumen) => row.id),
+          },
+        },
+      }),
+      prisma.t_pesanan_ukur.findMany({
+        where: {
+          pesanan_id: id,
+          id: {
+            notIn: pengukuran
+              .filter((row: t_pesanan_ukur) => row.id != null)
+              .map((row: t_pesanan_ukur) => row.id),
+          },
+        },
+      }),
+      prisma.t_pesanan_bahan.findMany({
+        where: {
+          pesanan_id: id,
+          id: {
+            notIn: bahan
+              .filter((row: t_pesanan_bahan) => row.id != null)
+              .map((row: t_pesanan_bahan) => row.id),
+          },
+        },
+      }),
+    ]);
+
     const pesanan = await prisma.t_pesanan.update({
       data: {
-        // pelanggan_id: pelanggan_id,
-        // jenis_pakaian_id: jenis_pakaian_id,
-        tahap,
-        penerima_tugas,
-        // target_tanggal: target_tanggal,
-        // catatan: catatan,
-        // dokumen: { createMany: { data: dokumen } },
-        // pengukuran: { createMany: { data: pengukuran } },
+        pelanggan_id: pelanggan_id,
+        jenis_pakaian_id: jenis_pakaian_id,
+        target_tanggal: target_tanggal,
+        catatan: catatan,
+        dokumen: {
+          createMany: {
+            data: dokumen.filter((row: t_pesanan_dokumen) => row.id == null),
+          },
+        },
+        pengukuran: {
+          createMany: {
+            data: pengukuran.filter((row: t_pesanan_ukur) => row.id == null),
+          },
+        },
+        bahan: {
+          createMany: {
+            data: bahan.filter((row: t_pesanan_bahan) => row.id == null),
+          },
+        },
       },
+      where: { id },
+    });
+
+    const deleteResponses = await Promise.all([
+      prisma.t_pesanan_dokumen.deleteMany({
+        where: { id: { in: toDeleteDokumenResponse.map((row) => row.id) } },
+      }),
+      prisma.t_pesanan_ukur.deleteMany({
+        where: { id: { in: toDeleteUkurResponse.map((row) => row.id) } },
+      }),
+      prisma.t_pesanan_bahan.deleteMany({
+        where: { id: { in: toDeleteBahanResponse.map((row) => row.id) } },
+      }),
+    ]);
+
+    res.json({ pesan: "Success" });
+  } catch (error) {
+    console.error("error ubah pesanan", error);
+    res.status(500).json({ pesan: "Internal server error", hasil: error });
+  }
+});
+app.put("/pesanan/ubah-tahap", async (req: Request, res: Response) => {
+  const { id, tahap, penerima_tugas, oleh } = req.body;
+
+  try {
+    const pesanan = await prisma.t_pesanan.update({
+      data: { tahap, penerima_tugas },
       where: { id },
     });
     const aktivitas = await prisma.t_riwayat_aktivitas.create({
@@ -256,7 +337,7 @@ app.put("/pesanan/ubah", async (req: Request, res: Response) => {
 
     res.json({ pesan: "Success" });
   } catch (error) {
-    console.error("error ubah pesanan", error);
+    console.error("error ubah tahap pesanan", error);
     res.status(500).json({ pesan: "Internal server error", hasil: error });
   }
 });
