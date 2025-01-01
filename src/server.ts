@@ -216,6 +216,19 @@ app.post("/pesanan/tambah", async (req: Request, res: Response) => {
       },
     });
 
+    for (let item of bahan) {
+      const bahanEntity = await prisma.m_bahan.findUnique({
+        where: { id: item.bahan_id },
+      });
+      if (bahanEntity != null) {
+        let stok = (bahanEntity.stok ?? 0) - item.jumlah;
+        const updateBahan = await prisma.m_bahan.update({
+          data: { stok },
+          where: { id: bahanEntity.id },
+        });
+      }
+    }
+
     res.json({
       pesan: "Success",
     });
@@ -310,6 +323,20 @@ app.put("/pesanan/ubah", async (req: Request, res: Response) => {
         where: { id: { in: toDeleteBahanResponse.map((row) => row.id) } },
       }),
     ]);
+
+    let newBahan = bahan.filter((row: t_pesanan_bahan) => row.id == null);
+    for (let item of newBahan) {
+      const bahanEntity = await prisma.m_bahan.findUnique({
+        where: { id: item.bahan_id },
+      });
+      if (bahanEntity != null) {
+        let stok = (bahanEntity.stok ?? 0) - item.jumlah;
+        const updateBahan = await prisma.m_bahan.update({
+          data: { stok },
+          where: { id: bahanEntity.id },
+        });
+      }
+    }
 
     res.json({ pesan: "Success" });
   } catch (error) {
@@ -875,7 +902,6 @@ app.get("/bahan/ambil", async (req: Request, res: Response) => {
         },
       },
     });
-    console.log("data.pesanan_bahan", data?.pesanan_bahan);
 
     res.json({
       pesan: "Success",
@@ -883,7 +909,6 @@ app.get("/bahan/ambil", async (req: Request, res: Response) => {
         ...data,
         id: Number(data?.id.toString()),
         pesanan_bahan: data?.pesanan_bahan.map((row) => {
-          console.log("row.pesanan", row.pesanan);
           return {
             ...row,
             id: Number(row.id.toString()),
@@ -945,6 +970,93 @@ app.put("/bahan/ubah", async (req: Request, res: Response) => {
     res.json({ pesan: "Success" });
   } catch (error) {
     console.error("error ubah bahan", error);
+    res.status(500).json({ pesan: "Internal server error", hasil: error });
+  }
+});
+
+// statistik
+app.get("/statistik/ambil", async (req: Request, res: Response) => {
+  try {
+    const activeOrderCount = await prisma.t_pesanan.count({
+      where: {
+        tahap: {
+          in: [
+            "BAHAN",
+            "UKUR",
+            "POLA",
+            "POTONG",
+            "JAHIT",
+            "AKSESORIS",
+            "PRESS",
+            "FIT",
+            "PERMAK",
+          ],
+        },
+      },
+    });
+    const completeOrderCount = await prisma.t_pesanan.count({
+      where: { tahap: { in: ["SIAP", "AMBIL"] } },
+    });
+    const customerCount = await prisma.m_pelanggan.count({});
+    const dueOrder = await prisma.t_pesanan.findMany({
+      where: {
+        tahap: {
+          in: [
+            "BAHAN",
+            "UKUR",
+            "POLA",
+            "POTONG",
+            "JAHIT",
+            "AKSESORIS",
+            "PRESS",
+            "FIT",
+            "PERMAK",
+          ],
+        },
+      },
+      orderBy: { target_tanggal: "asc" },
+      take: 5,
+      include: { pelanggan: true, jenis_pakaian: true, tahap_objek: true },
+    });
+    const stockBahan = await prisma.m_bahan.findMany({
+      orderBy: { stok: "asc" },
+      take: 5,
+    });
+
+    res.json({
+      pesan: "Success",
+      hasil: {
+        activeOrderCount,
+        completeOrderCount,
+        customerCount,
+        dueOrder: dueOrder.map((row) => {
+          return {
+            ...row,
+            id: Number(row.id.toString()),
+            pelanggan_id: Number(row.pelanggan_id.toString()),
+            jenis_pakaian_id: Number(row.jenis_pakaian_id.toString()),
+            penerima_tugas: Number(row.penerima_tugas?.toString()),
+            pelanggan: {
+              ...row.pelanggan,
+              id: Number(row.pelanggan?.id.toString()),
+            },
+            jenis_pakaian: {
+              ...row.jenis_pakaian,
+              id: Number(row.jenis_pakaian?.id.toString()),
+            },
+            tahap_objek: {
+              ...row.tahap_objek,
+              id: Number(row.tahap_objek?.id.toString()),
+            },
+          };
+        }),
+        stockBahan: stockBahan.map((row) => {
+          return { ...row, id: Number(row.id.toString()) };
+        }),
+      },
+    });
+  } catch (error) {
+    console.error("error get list pelanggan", error);
     res.status(500).json({ pesan: "Internal server error", hasil: error });
   }
 });
